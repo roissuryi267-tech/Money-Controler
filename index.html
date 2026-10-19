@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LedgerMaster</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc; /* Slate 50 */
+        }
+        
+        /* Custom Scrollbar for a premium look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Glassmorphism utilities */
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Smooth Progress Bar Transitions */
+        .progress-bar-fill {
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Modal Animation */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95) translateY(-10px);
+            transition: all 0.3s ease-out;
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center gap-6 glass rounded-3xl p-6 md:p-8 shadow-2xl">
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-3xl shadow-lg shadow-purple-500/30 shrink-0">
+                    💎
+                </div>
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">LedgerMaster</h1>
+                    <div class="flex items-center gap-3 mt-1">
+                        <p class="text-slate-400 text-sm hidden sm:block">Your Vibrant Financial Command Center</p>
+                        <select id="currencySelector" onchange="changeCurrency(this.value)" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors cursor-pointer">
+                            <option value="IDR">IDR (Rp)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="JPY">JPY (¥)</option>
+                            <option value="KRW">KRW (₩)</option>
+                            <option value="KZT">KZT (₸)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3">
+                <button onclick="openModal('incomeModal')" class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-900 font-bold shadow-lg shadow-teal-500/30 transition-all duration-300 transform hover:-translate-y-1">
+                    + Add Income
+                </button>
+                <button onclick="openModal('expenseModal')" class="px-5 py-3 rounded-xl bg-gradient-to-r from-rose-400 to-red-500 hover:from-rose-300 hover:to-red-400 text-white font-bold shadow-lg shadow-red-500/30 transition-all duration-300 transform hover:-translate-y-1">
+                    - Input Receipt
+                </button>
+                <button onclick="openModal('budgetModal')" class="px-5 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-all duration-300 border border-slate-600 hover:border-slate-400">
+                    ⚙️ Edit Budgets
+                </button>
+                <button onclick="openModal('cloudModal')" class="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-bold shadow-lg shadow-cyan-500/30 transition-all duration-300 transform hover:-translate-y-1">
+                    ☁️ Cloud Sync
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass rounded-3xl p-6 border-l-4 border-l-purple-500 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-purple-500/30 transition-all duration-500"></div>
+                <h2 class="text-slate-400 font-medium mb-1">Total Available Balance</h2>
+                <div id="total-balance" class="text-3xl font-bold text-white tracking-tight">0</div>
+            </div>
+            
+            <div class="glass rounded-3xl p-6 border-l-4 border-l-indigo-500 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl group-hover:bg-indigo-500/30 transition-all duration-500"></div>
+                <h2 class="text-slate-400 font-medium mb-1">Total Budget Allocated</h2>
+                <div id="total-budget" class="text-3xl font-bold text-white tracking-tight">0</div>
+            </div>
+
+            <div class="glass rounded-3xl p-6 border-l-4 border-l-rose-500 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-rose-500/20 rounded-full blur-2xl group-hover:bg-rose-500/30 transition-all duration-500"></div>
+                <h2 class="text-slate-400 font-medium mb-1">Total Expenses</h2>
+                <div id="total-expenses" class="text-3xl font-bold text-white tracking-tight">0</div>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">📊 Budget Categories</h2>
+            <div id="categories-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <!-- Categories will be injected here via JS -->
+            </div>
+        </div>
+
+        <div class="glass rounded-3xl p-6 md:p-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">📜 Transaction History</h2>
+            <div class="overflow-x-auto rounded-xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800 text-slate-300 uppercase text-xs tracking-wider">
+                            <th class="p-4 rounded-tl-xl font-medium">Date</th>
+                            <th class="p-4 font-medium">Description</th>
+                            <th class="p-4 font-medium">Category</th>
+                            <th class="p-4 font-medium text-right">Amount</th>
+                            <th class="p-4 rounded-tr-xl font-medium text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-list" class="divide-y divide-slate-700/50">
+                        <!-- Transactions will be injected here via JS -->
+                    </tbody>
+                </table>
+                <div id="empty-state" class="hidden py-12 text-center text-slate-500">
+                    <div class="text-5xl mb-3 opacity-50">🍃</div>
+                    <p>No transactions yet. Add some income or receipts!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="incomeModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-800 rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-slate-700 transform scale-95 transition-transform duration-300" id="incomeModalContent">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-emerald-400 flex items-center gap-2">💰 Add Income</h3>
+                <button onclick="closeModal('incomeModal')" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <form id="incomeForm" onsubmit="handleTransactionSubmit(event, 'income')" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Date</label>
+                    <input type="date" id="incDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Description</label>
+                    <input type="text" id="incDesc" required placeholder="e.g., Salary, Freelance..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Category / Source</label>
+                    <select id="incCat" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 appearance-none cursor-pointer">
+                        <!-- Options injected by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Amount</label>
+                    <input type="number" id="incAmount" required min="1" step="any" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+                </div>
+                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold text-lg rounded-xl px-4 py-3 mt-4 transition-colors shadow-lg shadow-emerald-500/20">
+                    Save Income
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="expenseModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-800 rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-slate-700 transform scale-95 transition-transform duration-300" id="expenseModalContent">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-rose-400 flex items-center gap-2">🧾 Input Receipt</h3>
+                <button onclick="closeModal('expenseModal')" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <form id="expenseForm" onsubmit="handleTransactionSubmit(event, 'expense')" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Date</label>
+                    <input type="date" id="expDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Description</label>
+                    <input type="text" id="expDesc" required placeholder="e.g., Groceries, Taxi..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Category</label>
+                    <select id="expCat" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 appearance-none cursor-pointer">
+                        <!-- Options injected by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Amount</label>
+                    <input type="number" id="expAmount" required min="1" step="any" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
+                </div>
+                <button type="submit" class="w-full bg-rose-500 hover:bg-rose-400 text-white font-bold text-lg rounded-xl px-4 py-3 mt-4 transition-colors shadow-lg shadow-rose-500/20">
+                    Save Expense
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="budgetModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-800 rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl border border-slate-700 max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300" id="budgetModalContent">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-indigo-400 flex items-center gap-2">⚙️ Edit Budgets</h3>
+                <button onclick="closeModal('budgetModal')" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="mb-4 p-4 bg-slate-900/50 rounded-xl border border-slate-700 flex justify-between items-center">
+                <span class="text-slate-400">Target Total:</span>
+                <span class="font-bold text-xl text-white" id="edit-budget-sum">0</span>
+            </div>
+            <form id="budgetForm" onsubmit="handleBudgetSubmit(event)" class="space-y-4">
+                <div id="budget-inputs-container" class="space-y-4">
+                    <!-- Inputs injected by JS -->
+                </div>
+                <button type="submit" class="w-full bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-lg rounded-xl px-4 py-3 mt-6 transition-colors shadow-lg shadow-indigo-500/20">
+                    Save Allocations
+                </button>
+            </form>
+
+            <!-- Add Custom Category Section -->
+            <div class="mt-8 pt-6 border-t border-slate-700">
+                <h4 class="text-lg font-bold text-white mb-4 flex items-center gap-2">✨ Add Custom Category</h4>
+                <div class="flex gap-2">
+                    <input type="text" id="newCatIcon" placeholder="Emoji" class="w-16 bg-slate-900 border border-slate-700 rounded-xl px-2 py-3 text-center text-white focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="newCatName" placeholder="Category Name" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
+                    <button type="button" onclick="addCustomCategory()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl px-4 py-3 transition-colors">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cloudModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-800 rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-slate-700 transform scale-95 transition-transform duration-300" id="cloudModalContent">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-blue-400 flex items-center gap-2">☁️ Hybrid Cloud Sync</h3>
+                <button onclick="closeModal('cloudModal')" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            
+            <p class="text-sm text-slate-400 mb-6">
+                Your data is safely stored locally (Zero-Bug Persistence). Connect to an external REST API (like JSONBin) or rely on the native background sync to backup globally.
+            </p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">API Endpoint URL (GET/PUT)</label>
+                    <input type="url" id="extEndpoint" placeholder="e.g., https://api.jsonbin.io/v3/b/YOUR_BIN" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">API Key / Secret Header</label>
+                    <input type="password" id="extApiKey" placeholder="X-Master-Key / X-Access-Key" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                
+                <div id="cloudStatus" class="hidden rounded-xl p-3 text-sm font-medium text-center transition-all"></div>
+
+                <div class="flex gap-3 pt-4 border-t border-slate-700">
+                    <button onclick="syncExternalCloud('push')" class="flex-1 bg-blue-500 hover:bg-blue-400 text-white font-bold rounded-xl px-4 py-3 transition-colors shadow-lg shadow-blue-500/20">
+                        ⬆️ Push Data
+                    </button>
+                    <button onclick="syncExternalCloud('pull')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl px-4 py-3 transition-colors border border-slate-600 hover:border-slate-400">
+                        ⬇ Pull Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        let userId = null;
+        let db = null;
+        let auth = null;
+        let stateDocRef = null;
+
+        // ALL AMOUNTS RESET TO 0 ON FRESH INSTALL AS REQUESTED
+        const DEFAULT_CATEGORIES = [
+            { id: 'Food', name: 'Food', icon: '🍜🍔', default: 0, theme: 'from-orange-500 to-red-600', shadow: 'shadow-orange-500/40' },
+            { id: 'Shopping', name: 'Shopping', icon: '🛍️💳', default: 0, theme: 'from-pink-500 to-rose-600', shadow: 'shadow-pink-500/40' },
+            { id: 'Korean Savings', name: 'Korean Savings', icon: '🇰🇷🌸', default: 0, theme: 'from-indigo-500 to-purple-600', shadow: 'shadow-indigo-500/40' },
+            { id: 'Internet', name: 'Internet', icon: '🌐📡', default: 0, theme: 'from-cyan-500 to-blue-600', shadow: 'shadow-cyan-500/40' },
+            { id: 'Transport', name: 'Transport', icon: '✈️🚆', default: 0, theme: 'from-teal-500 to-emerald-600', shadow: 'shadow-teal-500/40' },
+            { id: 'Others', name: 'Others', icon: '✨📦', default: 0, theme: 'from-fuchsia-500 to-pink-600', shadow: 'shadow-fuchsia-500/40' }
+        ];
+
+        // Global State 
+        let state = {
+            currency: 'IDR',
+            budgets: {},
+            categories: [...DEFAULT_CATEGORIES],
+            transactions: []
+        };
+
+        const formatCurrency = (amount) => {
+            const curr = state.currency || 'IDR';
+            const locales = {
+                'IDR': 'id-ID',
+                'USD': 'en-US',
+                'EUR': 'de-DE',
+                'GBP': 'en-GB',
+                'JPY': 'ja-JP',
+                'KRW': 'ko-KR',
+                'KZT': 'kk-KZ'
+            };
+            return new Intl.NumberFormat(locales[curr] || 'en-US', {
+                style: 'currency',
+                currency: curr,
+                minimumFractionDigits: ['IDR', 'JPY', 'KRW', 'KZT'].includes(curr) ? 0 : 2,
+                maximumFractionDigits: ['IDR', 'JPY', 'KRW', 'KZT'].includes(curr) ? 0 : 2
+            }).format(amount);
+        };
+
+        window.changeCurrency = function(val) {
+            state.currency = val;
+            saveState(); // Sinkron ke localStorage & awan
+            renderDashboard();
+            renderTransactions();
+        };
+
+        async function saveState() {
+            // 1. ZERO-BUG PERSISTENCE: Synchronous LocalStorage Save always runs first!
+            try {
+                localStorage.setItem('ledgerMasterState', JSON.stringify(state));
+            } catch(e) {
+                console.error("Local Storage Save Error:", e);
+            }
+
+            // 2. Background Asynchronous Firebase Cloud Save
+            if (!userId || !stateDocRef) return;
+            try {
+                await setDoc(stateDocRef, state);
+            } catch (e) {
+                console.warn("Firebase sync delayed or offline:", e);
+            }
+        }
+
+        function loadLocalState() {
+            const localData = localStorage.getItem('ledgerMasterState');
+            if (localData) {
+                try {
+                    const parsedData = JSON.parse(localData);
+                    if (parsedData && parsedData.transactions && parsedData.budgets) {
+                        state = parsedData;
+                        
+                        // Set dropdown currency if exists
+                        if(!state.currency) state.currency = 'IDR';
+                        const currSel = document.getElementById('currencySelector');
+                        if(currSel) currSel.value = state.currency;
+                        
+                        return true; // Successfully loaded local
+                    }
+                } catch(e) {
+                    console.error('Error parsing localStorage', e);
+                }
+            }
+            return false; // Not found or corrupt
+        }
+
+        function initializeDefaultState() {
+            let initialBudgets = {};
+            DEFAULT_CATEGORIES.forEach(c => initialBudgets[c.id] = c.default); // Init to 0
+            
+            state = {
+                currency: 'IDR',
+                categories: [...DEFAULT_CATEGORIES],
+                budgets: initialBudgets,
+                transactions: [] // Empty transactions array on fresh start
+            };
+            saveState();
+        }
+
+        async function initApp() {
+            // First load from localStorage to render immediately
+            const hasLocalData = loadLocalState();
+            if (!hasLocalData) {
+                initializeDefaultState();
+            }
+            
+            // Populate UI instantly with local data
+            populateDropdowns();
+            renderDashboard();
+            renderTransactions();
+
+            // Then try to connect to Firebase for real-time background sync
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (token) {
+                    await signInWithCustomToken(auth, token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser.uid;
+                stateDocRef = doc(db, 'artifacts', appId, 'users', userId, 'ledger', 'state');
+                
+                subscribeToCloudData();
+            } catch(e) {
+                console.log("Running in local-only / offline mode.", e);
+            }
+        }
+
+        function subscribeToCloudData() {
+            onSnapshot(stateDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const cloudData = docSnap.data();
+                    if (cloudData && cloudData.transactions && cloudData.budgets) {
+                        state = cloudData;
+                        
+                        // Fallback handling
+                        if (!state.categories || state.categories.length === 0) {
+                            state.categories = [...DEFAULT_CATEGORIES];
+                        }
+                        if (!state.currency) state.currency = 'IDR';
+                        
+                        // Update UI settings
+                        const currSel = document.getElementById('currencySelector');
+                        if(currSel) currSel.value = state.currency;
+
+                        // Important: Push back to localStorage to maintain local parity
+                        localStorage.setItem('ledgerMasterState', JSON.stringify(state));
+                        
+                        populateDropdowns();
+                        renderDashboard();
+                        renderTransactions();
+                    }
+                }
+            }, (error) => {
+                console.error("Cloud listener error:", error);
+            });
+        }
+
+        function populateDropdowns() {
+            const catOptions = (state.categories || DEFAULT_CATEGORIES).map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+            const expCat = document.getElementById('expCat');
+            const incCat = document.getElementById('incCat');
+            
+            if (expCat) expCat.innerHTML = catOptions;
+            if (incCat) incCat.innerHTML = `<option value="General">💰 General Income</option>` + catOptions;
+
+            const today = new Date().toISOString().split('T')[0];
+            const incDate = document.getElementById('incDate');
+            const expDate = document.getElementById('expDate');
+            
+            if (incDate && !incDate.value) incDate.value = today;
+            if (expDate && !expDate.value) expDate.value = today;
+        }
+
+        function renderDashboard() {
+            let totalIncome = 0;
+            let totalExpenses = 0;
+            
+            state.transactions.forEach(t => {
+                if (t.type === 'income') totalIncome += parseFloat(t.amount);
+                if (t.type === 'expense') totalExpenses += parseFloat(t.amount);
+            });
+
+            const totalBalance = totalIncome - totalExpenses;
+            const totalBudget = Object.values(state.budgets).reduce((a, b) => a + (parseFloat(b) || 0), 0);
+
+            const balanceEl = document.getElementById('total-balance');
+            if(balanceEl) {
+                balanceEl.textContent = formatCurrency(totalBalance);
+                balanceEl.className = `text-3xl font-bold tracking-tight ${totalBalance < 0 ? 'text-rose-400' : 'text-white'}`;
+            }
+            
+            const budgetEl = document.getElementById('total-budget');
+            if(budgetEl) budgetEl.textContent = formatCurrency(totalBudget);
+            
+            const expenseEl = document.getElementById('total-expenses');
+            if(expenseEl) expenseEl.textContent = formatCurrency(totalExpenses);
+
+            let categoryExpenses = {};
+            let categoryIncome = {};
+            (state.categories || []).forEach(c => {
+                categoryExpenses[c.id] = 0;
+                categoryIncome[c.id] = 0;
+            });
+            
+            state.transactions.forEach(t => {
+                if (t.type === 'expense' && categoryExpenses[t.category] !== undefined) {
+                    categoryExpenses[t.category] += parseFloat(t.amount);
+                }
+                if (t.type === 'income' && categoryIncome[t.category] !== undefined) {
+                    categoryIncome[t.category] += parseFloat(t.amount);
+                }
+            });
+
+            const grid = document.getElementById('categories-grid');
+            if (grid) {
+                grid.innerHTML = (state.categories || []).map(cat => {
+                    const baseBudget = parseFloat(state.budgets[cat.id]) || 0;
+                    const addedIncome = categoryIncome[cat.id] || 0;
+                    const limit = baseBudget + addedIncome;
+                    
+                    const used = categoryExpenses[cat.id] || 0;
+                    const remaining = limit - used;
+                    let percent = limit > 0 ? (used / limit) * 100 : 0;
+                    if (percent > 100) percent = 100;
+                    
+                    const isOverBudget = remaining < 0;
+
+                    return `
+                        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br ${cat.theme} p-6 shadow-xl ${cat.shadow} transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02]">
+                            <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                            <div class="relative z-10 flex flex-col h-full justify-between">
+                                <div class="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h3 class="text-xl font-bold text-white drop-shadow-md">${cat.name}</h3>
+                                        <div class="text-white/80 text-xs font-medium mt-1 space-y-0.5">
+                                            <div>Budget: ${formatCurrency(baseBudget)}</div>
+                                            ${addedIncome > 0 ? `<div class="text-emerald-300 font-bold">+ In: ${formatCurrency(addedIncome)}</div>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="text-4xl filter drop-shadow-lg bg-white/20 p-3 rounded-2xl backdrop-blur-sm">${cat.icon}</div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between text-sm font-semibold text-white mb-2">
+                                        <span>Used: ${formatCurrency(used)}</span>
+                                        <span class="${isOverBudget ? 'text-red-200 animate-pulse' : 'text-white'}">
+                                            Rem: ${formatCurrency(remaining)}
+                                        </span>
+                                    </div>
+                                    <div class="w-full bg-black/20 rounded-full h-3 backdrop-blur-sm overflow-hidden border border-white/10">
+                                        <div class="bg-white h-3 rounded-full progress-bar-fill ${isOverBudget ? 'bg-red-300' : ''}" style="width: 0%" data-target="${percent}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                setTimeout(() => {
+                    document.querySelectorAll('.progress-bar-fill').forEach(bar => {
+                        bar.style.width = bar.getAttribute('data-target');
+                    });
+                }, 50);
+            }
+        }
+
+        function renderTransactions() {
+            const tbody = document.getElementById('transaction-list');
+            const emptyState = document.getElementById('empty-state');
+            
+            if (!tbody || !emptyState) return;
+
+            const sortedTx = [...state.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (sortedTx.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = sortedTx.map(t => {
+                const isIncome = t.type === 'income';
+                return `
+                    <tr class="hover:bg-slate-800/50 transition-colors group">
+                        <td class="p-4 border-b border-slate-700/50 text-slate-300 whitespace-nowrap">${t.date}</td>
+                        <td class="p-4 border-b border-slate-700/50 font-medium">${t.description}</td>
+                        <td class="p-4 border-b border-slate-700/50">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300">
+                                ${t.category}
+                            </span>
+                        </td>
+                        <td class="p-4 border-b border-slate-700/50 text-right font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${isIncome ? '+' : '-'} ${formatCurrency(t.amount)}
+                        </td>
+                        <td class="p-4 border-b border-slate-700/50 text-center">
+                            <button onclick="deleteTransaction('${t.id}')" class="text-slate-500 hover:text-red-400 p-2 rounded-lg hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Delete">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.handleTransactionSubmit = function(e, type) {
+            e.preventDefault();
+            const date = document.getElementById(type === 'income' ? 'incDate' : 'expDate').value;
+            const desc = document.getElementById(type === 'income' ? 'incDesc' : 'expDesc').value;
+            const cat = document.getElementById(type === 'income' ? 'incCat' : 'expCat').value;
+            const amount = parseFloat(document.getElementById(type === 'income' ? 'incAmount' : 'expAmount').value);
+
+            const newTx = {
+                id: Date.now().toString(),
+                type: type,
+                date: date,
+                description: desc,
+                category: cat,
+                amount: amount
+            };
+
+            state.transactions.push(newTx);
+            e.target.reset();
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById(type === 'income' ? 'incDate' : 'expDate').value = today;
+
+            closeModal(type + 'Modal');
+            
+            saveState(); // Sinkronisasi segera!
+            renderDashboard();
+            renderTransactions();
+        };
+
+        window.deleteTransaction = function(id) {
+            state.transactions = state.transactions.filter(t => t.id !== id);
+            saveState(); 
+            renderDashboard();
+            renderTransactions();
+        };
+
+        function populateBudgetForm() {
+            const container = document.getElementById('budget-inputs-container');
+            if(!container) return;
+            container.innerHTML = (state.categories || []).map(cat => `
+                <div class="flex flex-col">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-medium text-slate-400 flex items-center gap-2">
+                            ${cat.icon} ${cat.name}
+                        </label>
+                        <button type="button" onclick="removeCategory('${cat.id}')" class="text-xs text-rose-400 hover:text-rose-300 transition-colors">
+                            Remove
+                        </button>
+                    </div>
+                    <input type="number" id="edit-budget-${cat.id}" value="${state.budgets[cat.id] || 0}" min="0" step="any" oninput="updateBudgetSum()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+            `).join('');
+            updateBudgetSum();
+        }
+
+        window.updateBudgetSum = function() {
+            let sum = 0;
+            (state.categories || []).forEach(cat => {
+                const input = document.getElementById(`edit-budget-${cat.id}`);
+                if (input) sum += parseFloat(input.value || 0);
+            });
+            const sumEl = document.getElementById('edit-budget-sum');
+            if(sumEl) sumEl.textContent = formatCurrency(sum);
+        };
+
+        window.handleBudgetSubmit = function(e) {
+            e.preventDefault();
+            (state.categories || []).forEach(cat => {
+                const input = document.getElementById(`edit-budget-${cat.id}`);
+                if (input) state.budgets[cat.id] = parseFloat(input.value || 0);
+            });
+            closeModal('budgetModal');
+            saveState(); 
+            renderDashboard();
+        };
+
+        window.addCustomCategory = function() {
+            const icon = document.getElementById('newCatIcon').value || '✨';
+            const name = document.getElementById('newCatName').value.trim();
+            if(!name) return;
+            
+            const id = name.replace(/\s+/g, '-').toLowerCase();
+            
+            // Random vibrant gradient
+            const colors = ['fuchsia', 'emerald', 'amber', 'sky', 'violet', 'rose'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const theme = `from-${randomColor}-500 to-${randomColor}-600`;
+            const shadow = `shadow-${randomColor}-500/40`;
+
+            const newCat = {
+                id: id,
+                name: name,
+                icon: icon,
+                theme: theme,
+                shadow: shadow
+            };
+
+            if(!state.categories) state.categories = [];
+            if(state.categories.find(c => c.id === id)) return; // Prevent duplicate
+
+            state.categories.push(newCat);
+            state.budgets[newCat.id] = 0; 
+
+            document.getElementById('newCatIcon').value = '';
+            document.getElementById('newCatName').value = '';
+
+            populateBudgetForm();
+            populateDropdowns();
+            saveState(); 
+            renderDashboard();
+        };
+
+        window.removeCategory = function(catId) {
+            if(!state.categories || state.categories.length <= 1) return;
+            state.categories = state.categories.filter(c => c.id !== catId);
+            delete state.budgets[catId];
+            populateBudgetForm();
+            populateDropdowns();
+            saveState(); 
+            renderDashboard();
+        };
+
+        window.showCloudStatus = function(message, isError = false) {
+            const statusEl = document.getElementById('cloudStatus');
+            statusEl.textContent = message;
+            statusEl.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-400', 'bg-rose-500/10', 'text-rose-400');
+            statusEl.classList.add(isError ? 'bg-rose-500/10' : 'bg-emerald-500/10');
+            statusEl.classList.add(isError ? 'text-rose-400' : 'text-emerald-400');
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 5000);
+        };
+
+        window.syncExternalCloud = async function(action) {
+            const url = document.getElementById('extEndpoint').value.trim();
+            const key = document.getElementById('extApiKey').value.trim();
+            
+            if(!url) {
+                showCloudStatus('Error: API Endpoint URL is required', true);
+                return;
+            }
+
+            try {
+                showCloudStatus('Syncing...', false);
+                const headers = { 'Content-Type': 'application/json' };
+                if (key) {
+                    headers['X-Master-Key'] = key;
+                    headers['X-Access-Key'] = key;
+                }
+
+                if (action === 'push') {
+                    const response = await fetch(url, {
+                        method: 'PUT',
+                        headers: headers,
+                        body: JSON.stringify(state)
+                    });
+                    
+                    if(!response.ok && response.status === 404) {
+                       await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(state) });
+                    }
+                    
+                    showCloudStatus('✅ Successfully PUSHED data to external cloud!', false);
+                } else if (action === 'pull') {
+                    const response = await fetch(url, { headers: headers });
+                    if(response.ok) {
+                        const data = await response.json();
+                        const newState = data.record ? data.record : data;
+                        
+                        if(newState && newState.transactions) {
+                            state = newState;
+                            saveState(); // Sync down to Local Storage & Firebase immediately!
+                            populateDropdowns();
+                            
+                            // Re-apply currency select
+                            const currSel = document.getElementById('currencySelector');
+                            if(currSel) currSel.value = state.currency || 'IDR';
+
+                            renderDashboard();
+                            renderTransactions();
+                            showCloudStatus('✅ Successfully PULLED data from external cloud!', false);
+                        } else {
+                            showCloudStatus('Error: Invalid JSON structure.', true);
+                        }
+                    } else {
+                        showCloudStatus('Error: Failed to fetch from REST API.', true);
+                    }
+                }
+            } catch (error) {
+                console.error('External Sync Error:', error);
+                showCloudStatus('Error: Sync failed. Check browser console.', true);
+            }
+        };
+
+        window.openModal = function(id) {
+            const modal = document.getElementById(id);
+            const content = document.getElementById(id + 'Content');
+            if(id === 'budgetModal') populateBudgetForm();
+            modal.classList.remove('hidden');
+            void modal.offsetWidth; // Trigger reflow
+            modal.classList.remove('opacity-0');
+            content.classList.add('scale-100');
+            content.classList.remove('scale-95');
+        };
+
+        window.closeModal = function(id) {
+            const modal = document.getElementById(id);
+            const content = document.getElementById(id + 'Content');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        };
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('fixed') && event.target.id.includes('Modal')) {
+                closeModal(event.target.id);
+            }
+        };
+
+        // Safety Catch: Save on unload just in case
+        window.addEventListener('beforeunload', () => {
+            try { localStorage.setItem('ledgerMasterState', JSON.stringify(state)); } catch(e){}
+        });
+
+        // Initialize!
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
